@@ -6,9 +6,6 @@
     <title>Vortex Wear - Sistema Logístico B2B</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    
     <style>
         /* --- ESTILO (CSS) --- */
         :root {
@@ -256,9 +253,7 @@
                         <option>Transferência</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-pagar" id="btn-finalizar-texto">
-                    <i class="fas fa-paper-plane"></i> Baixar PDF e Enviar
-                </button>
+                <button type="submit" class="btn-pagar" id="btn-finalizar-texto">Gerar Pedido</button>
                 <button type="button" onclick="fecharPagamento()" class="btn-cancelar">Voltar</button>
             </form>
         </div>
@@ -419,6 +414,7 @@
             const qtdInput = document.getElementById(`qtd-${id}`);
             const quantidade = parseInt(qtdInput.value);
             
+            // Aceita adicionar 1, pois a trava será na soma total
             if (quantidade < 1) {
                 alert("A quantidade deve ser pelo menos 1.");
                 return;
@@ -439,6 +435,7 @@
             setTimeout(() => { btn.innerHTML = originalText; }, 1000);
         }
 
+        // Função dos botões + e -
         function alterarQuantidadeBotao(index, mudanca) {
             const item = carrinho[index];
             item.quantidade += mudanca;
@@ -450,6 +447,7 @@
             }
         }
 
+        // Função do Input no carrinho
         function alterarQuantidadeInput(index, novoValor) {
             let qtd = parseInt(novoValor);
 
@@ -482,9 +480,11 @@
                                 <h4>${item.nome}</h4>
                                 <div class="qtd-selector-carrinho">
                                     <button class="btn-mini" onclick="alterarQuantidadeBotao(${index}, -1)">-</button>
+                                    
                                     <input type="number" class="qtd-input-carrinho" 
                                            value="${item.quantidade}" 
                                            onchange="alterarQuantidadeInput(${index}, this.value)">
+                                    
                                     <button class="btn-mini" onclick="alterarQuantidadeBotao(${index}, 1)">+</button>
                                 </div>
                                 <small>Unit: R$ ${item.preco.toFixed(2)}</small>
@@ -496,6 +496,7 @@
                 });
             }
 
+            // --- CÁLCULO LOGÍSTICO (CAIXAS) ---
             const totalCaixas = Math.ceil(totalUnidades / UNIDADES_POR_CAIXA);
             let multiplicadorFrete = Math.ceil(totalCaixas / 10);
             if (totalUnidades === 0) multiplicadorFrete = 0;
@@ -537,6 +538,7 @@
                 return;
             }
 
+            // --- TRAVA DE MÍNIMO GLOBAL ---
             const totalUnidades = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
             if (totalUnidades < QTD_MINIMA) {
                 alert(`ATENÇÃO:\nO pedido mínimo para atacado é de ${QTD_MINIMA} peças (1 Caixa).\n\nVocê selecionou apenas ${totalUnidades} peças no total.\nAdicione mais itens para fechar a caixa.`);
@@ -568,10 +570,10 @@
             
             if(isRetirada) {
                 aviso.style.display = 'block';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar (Coleta)';
+                btnTexto.innerText = "Finalizar e Agendar Coleta";
             } else {
                 aviso.style.display = 'none';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar (Entrega)';
+                btnTexto.innerText = "Gerar Pedido de Entrega";
             }
 
             modal.classList.add('active');
@@ -581,109 +583,62 @@
             document.getElementById('modal-pagamento').classList.remove('active');
         }
 
-        // --- GERADOR DE PDF E ENVIO WHATSAPP ---
+        // --- FUNÇÃO FINALIZAR (WHATSAPP) ---
         function finalizarPedido(event) {
             event.preventDefault();
             
+            // 1. Validação Telefone
             const telInput = document.getElementById('input-telefone');
             const telNumeros = telInput.value.replace(/\D/g, '');
 
             if (telNumeros.length < 11) {
-                alert("Erro: O telefone precisa ter o DDD + 9 dígitos (Total 11 números).");
+                alert("Erro: O telefone precisa ter o DDD + 9 dígitos (Total 11 números).\nEx: (11) 99999-9999");
                 telInput.focus();
                 return; 
             }
 
-            const btn = document.querySelector('.btn-pagar');
-            const textoOriginal = btn.innerHTML;
-            btn.innerText = "Processando...";
-            
-            // Dados
+            // 2. Coleta de Dados
             const nome = document.getElementById('input-nome').value;
             const pagamento = document.getElementById('select-pagamento').value;
             const isRetirada = document.getElementById('check-retirada').checked;
-            const subtotal = document.getElementById('subtotal-preco').innerText;
-            const freteVal = document.getElementById('frete-preco').innerText;
             const totalGeral = document.getElementById('total-final').innerText;
-            const cep = document.getElementById('input-cep').value;
+            const freteValor = document.getElementById('frete-preco').innerText;
 
-            // Gera PDF
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const fileName = `Pedido_Vortex_${nome.replace(/\s+/g, '_')}.pdf`;
-
-            doc.setFontSize(22);
-            doc.setTextColor(0, 31, 63);
-            doc.text("VORTEX WEAR", 105, 20, null, null, "center");
-            
-            doc.setFontSize(14);
-            doc.setTextColor(50);
-            doc.text("PEDIDO DE VENDA (ATACADO)", 105, 30, null, null, "center");
-
-            doc.setLineWidth(0.5);
-            doc.line(20, 35, 190, 35);
-
-            doc.setFontSize(12);
-            doc.setTextColor(0);
-            doc.text(`Cliente: ${nome.toUpperCase()}`, 20, 45);
-            doc.text(`Contato: ${telInput.value}`, 20, 52);
-            doc.text(`Forma de Pagamento: ${pagamento}`, 20, 59);
-            
-            if(isRetirada) {
-                doc.setTextColor(0, 100, 0); 
-                doc.text("Método de Entrega: RETIRADA NO LOCAL", 20, 66);
-            } else {
-                doc.text(`Método de Entrega: TRANSPORTADORA`, 20, 66);
-                doc.text(`CEP de Destino: ${cep}`, 20, 73);
-            }
-
-            const dadosTabela = carrinho.map(item => [
-                item.nome,
-                item.quantidade,
-                "R$ " + item.preco.toFixed(2),
-                "R$ " + (item.preco * item.quantidade).toFixed(2)
-            ]);
-
-            doc.autoTable({
-                startY: 85,
-                head: [['Produto', 'Qtd', 'Unitário', 'Subtotal']],
-                body: dadosTabela,
-                theme: 'striped',
-                headStyles: { fillColor: [0, 31, 63] },
-                styles: { fontSize: 10 }
+            // 3. Monta Lista de Itens
+            let listaItens = "";
+            carrinho.forEach(item => {
+                listaItens += `- ${item.quantidade}x ${item.nome} (R$ ${item.preco.toFixed(2)})\n`;
             });
 
-            let finalY = doc.lastAutoTable.finalY + 10;
+            // 4. Monta a Mensagem do WhatsApp
+            let mensagem = `*NOVO PEDIDO - VORTEX WEAR*\n\n`;
+            mensagem += `*Cliente:* ${nome}\n`;
+            mensagem += `*Contato:* ${telInput.value}\n`;
+            mensagem += `*Pagamento:* ${pagamento}\n\n`;
+            mensagem += `*Itens do Pedido:*\n${listaItens}\n`;
             
-            doc.setFontSize(12);
-            doc.setTextColor(0);
-            doc.text(`Subtotal: ${subtotal}`, 140, finalY);
-            doc.text(`Frete: ${freteVal}`, 140, finalY + 7);
+            if(isRetirada) {
+                mensagem += `*Frete:* RETIRADA NA LOJA (Grátis)\n`;
+            } else {
+                const cep = document.getElementById('input-cep').value;
+                mensagem += `*Frete:* ENTREGA (${freteValor})\n`;
+                mensagem += `*CEP Destino:* ${cep}\n`;
+            }
+
+            mensagem += `\n*TOTAL FINAL:* ${totalGeral}`;
+
+            // 5. Envia para o WhatsApp
+            const numeroDestino = "5511975524934"; // Seu número
+            const url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(mensagem)}`;
+
+            const btn = document.querySelector('.btn-pagar');
+            btn.innerText = "Enviando...";
             
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text(`TOTAL: ${totalGeral}`, 140, finalY + 16);
+            // Abre o WhatsApp em nova aba
+            window.open(url, '_blank');
 
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(100);
-            doc.text("Obrigado pela preferência!", 105, 280, null, null, "center");
-
-            // 1. Baixa o PDF
-            doc.save(fileName);
-
-            // 2. Abre o WhatsApp com a mensagem pronta
-            const textoZap = `Olá! Acabei de gerar o pedido *${fileName}* no site.\nEstou enviando o arquivo PDF em anexo aqui na conversa.`;
-            const numeroDestino = "5511975524934";
-            const linkZap = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(textoZap)}`;
-
-            // Pequeno delay para garantir que o download comece antes de mudar de aba
+            // Feedback visual e reload
             setTimeout(() => {
-                window.open(linkZap, '_blank');
-                
-                // 3. Alerta o usuário
-                alert("PEDIDO GERADO!\n\n1. O PDF foi baixado no seu dispositivo.\n2. O WhatsApp foi aberto.\n3. POR FAVOR, ANEXE O ARQUIVO PDF NA CONVERSA.");
-                
                 location.reload(); 
             }, 1000);
         }
