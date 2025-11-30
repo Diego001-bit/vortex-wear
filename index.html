@@ -180,7 +180,7 @@
     <main class="container">
         <section class="hero">
             <h2>Logística Integrada B2B</h2>
-            <p>Venda por atacado: Mínimo 15 unidades (1 Caixa).</p>
+            <p>Venda por atacado: Mínimo 15 unidades (Cores Variadas).</p>
         </section>
 
         <section id="vitrine" class="grid-produtos"></section>
@@ -264,7 +264,7 @@
         const ORIGEM = { lat: -23.6646, lon: -46.7645 }; // Embu das Artes/SP
         const PRECO_POR_KM = 3.30;
         const UNIDADES_POR_CAIXA = 15;
-        const QTD_MINIMA = 15;
+        const QTD_MINIMA = 15; // Mínimo do PEDIDO TOTAL
 
         // --- LISTA DE PRODUTOS ---
         const produtos = [
@@ -283,7 +283,7 @@
         let carrinho = [];
         let custoFreteUnitario = 0; 
 
-        // Renderiza Vitrine
+        // Renderiza Vitrine (Agora permite adicionar 1)
         function renderizarProdutos() {
             const vitrine = document.getElementById('vitrine');
             vitrine.innerHTML = "";
@@ -414,9 +414,9 @@
             const qtdInput = document.getElementById(`qtd-${id}`);
             const quantidade = parseInt(qtdInput.value);
             
-            // Validação Mínima ao Adicionar
-            if (quantidade < QTD_MINIMA) {
-                alert(`Quantidade mínima é ${QTD_MINIMA} unidades (1 caixa).`);
+            // Aceita adicionar 1, pois a trava será na soma total
+            if (quantidade < 1) {
+                alert("A quantidade deve ser pelo menos 1.");
                 return;
             }
 
@@ -435,38 +435,28 @@
             setTimeout(() => { btn.innerHTML = originalText; }, 1000);
         }
 
+        // Função dos botões + e -
         function alterarQuantidadeBotao(index, mudanca) {
             const item = carrinho[index];
-            
-            if (mudanca < 0 && item.quantidade <= QTD_MINIMA) {
+            item.quantidade += mudanca;
+
+            if (item.quantidade <= 0) {
                  removerDoCarrinho(index);
-                 return;
-            }
-            if (mudanca < 0 && (item.quantidade + mudanca) < QTD_MINIMA) {
-                 alert("Mínimo de 15 unidades.");
-                 item.quantidade = QTD_MINIMA;
             } else {
-                 item.quantidade += mudanca;
+                 atualizarTotais();
             }
-            
-            atualizarTotais();
         }
 
+        // Função do Input no carrinho
         function alterarQuantidadeInput(index, novoValor) {
             let qtd = parseInt(novoValor);
 
             if(isNaN(qtd) || qtd <= 0) {
                 removerDoCarrinho(index);
-                return;
-            }
-
-            if(qtd < QTD_MINIMA) {
-                alert(`A quantidade mínima é ${QTD_MINIMA}. Ajustando...`);
-                carrinho[index].quantidade = QTD_MINIMA;
             } else {
                 carrinho[index].quantidade = qtd;
+                atualizarTotais();
             }
-            atualizarTotais();
         }
 
         function atualizarTotais() {
@@ -548,6 +538,13 @@
                 return;
             }
 
+            // --- TRAVA DE MÍNIMO GLOBAL ---
+            const totalUnidades = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
+            if (totalUnidades < QTD_MINIMA) {
+                alert(`ATENÇÃO:\nO pedido mínimo para atacado é de ${QTD_MINIMA} peças (1 Caixa).\n\nVocê selecionou apenas ${totalUnidades} peças no total.\nAdicione mais itens para fechar a caixa.`);
+                return;
+            }
+
             const isRetirada = document.getElementById('check-retirada').checked;
             
             if (!isRetirada && custoFreteUnitario === 0) {
@@ -591,13 +588,12 @@
             
             // --- VALIDAÇÃO DO TELEFONE ---
             const telInput = document.getElementById('input-telefone');
-            // Limpa tudo que não for número (espaço, traço, parenteses)
             const telNumeros = telInput.value.replace(/\D/g, '');
 
             if (telNumeros.length < 11) {
                 alert("Erro: O telefone precisa ter o DDD + 9 dígitos (Total 11 números).\nEx: (11) 99999-9999");
                 telInput.focus();
-                return; // Impede o envio
+                return; 
             }
 
             const btn = document.querySelector('.btn-pagar');
