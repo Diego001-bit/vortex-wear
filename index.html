@@ -91,9 +91,9 @@
 
         /* Sidebar Carrinho */
         .carrinho-sidebar {
-            position: fixed; top: 0; right: -500px; /* Esconde mais para a direita */
-            width: 450px; /* AUMENTADO PARA NÃO CORTAR O BOTÃO */
-            max-width: 100vw; /* Garante que não estoure a tela do celular */
+            position: fixed; top: 0; right: -500px;
+            width: 450px; 
+            max-width: 100vw;
             height: 100%; background: white;
             box-shadow: -5px 0 15px rgba(0,0,0,0.1);
             transition: right 0.4s ease; z-index: 200;
@@ -141,11 +141,9 @@
         .frete-input-group { display: flex; gap: 5px; margin-top: 5px; }
         .frete-input-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* AJUSTE PARA OS CAMPOS CABEREM */
-        #input-cep { flex: 2; min-width: 0; } /* CEP ocupa mais espaço */
-        #input-numero { flex: 1; min-width: 0; } /* Numero ocupa menos */
+        #input-cep { flex: 2; min-width: 0; } 
+        #input-numero { flex: 1; min-width: 0; }
         
-        /* AJUSTE PARA O BOTÃO NÃO SER CORTADO */
         .btn-calc-frete { 
             padding: 8px 15px; 
             background: var(--primary-color); 
@@ -153,7 +151,7 @@
             border: none; 
             border-radius: 4px; 
             cursor: pointer; 
-            flex-shrink: 0; /* IMPEDE O BOTÃO DE SER ESMAGADO */
+            flex-shrink: 0; 
         }
         .btn-calc-frete:hover { background: var(--secondary-color); }
         .btn-calc-frete:disabled { background: #ccc; cursor: not-allowed; }
@@ -282,11 +280,12 @@
     </div>
 
     <script>
-        // --- 1. CONFIGURAÇÃO ---
+        // --- 1. CONFIGURAÇÃO (GOOGLE SHEETS E DADOS) ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzypoWEKqbeEj6wLTpbOeN0V4a07Y6tLjPm4jagABMDMirzTNkFadqSX3gTpW6VGH0j/exec";
         const ORIGEM = { lat: -23.6646, lon: -46.7645 }; // Embu das Artes/SP
         const PRECO_POR_KM = 3.30;
         const UNIDADES_POR_CAIXA = 15;
-        const QTD_MINIMA = 15; // Mínimo do PEDIDO TOTAL
+        const QTD_MINIMA = 15; 
 
         // --- LISTA DE PRODUTOS ---
         const produtos = [
@@ -592,10 +591,10 @@
             
             if(isRetirada) {
                 aviso.style.display = 'block';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar';
+                btnTexto.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Compra';
             } else {
                 aviso.style.display = 'none';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar';
+                btnTexto.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Compra';
             }
 
             modal.classList.add('active');
@@ -605,7 +604,7 @@
             document.getElementById('modal-pagamento').classList.remove('active');
         }
 
-        // --- GERADOR DE ID, PDF E WHATSAPP ---
+        // --- FUNÇÃO PRINCIPAL: SALVA DADOS, GERA PDF E ABRE WHATSAPP ---
         function finalizarPedido(event) {
             event.preventDefault();
             
@@ -618,38 +617,67 @@
                 return; 
             }
 
-            // 1. GERAR ID DO PEDIDO
+            const btn = document.querySelector('.btn-pagar');
+            const textoOriginal = btn.innerHTML;
+            btn.innerText = "Registrando...";
+            btn.disabled = true;
+
+            // 1. DADOS
             const ultimos4Telefone = telNumeros.slice(-4);
             const aleatorio4 = Math.floor(1000 + Math.random() * 9000);
             const pedidoID = `PED-${ultimos4Telefone}-${aleatorio4}`;
-
-            const btn = document.querySelector('.btn-pagar');
-            const textoOriginal = btn.innerHTML;
-            btn.innerText = "Processando...";
             
-            // Dados
             const nome = document.getElementById('input-nome').value;
             const pagamento = document.getElementById('select-pagamento').value;
             const isRetirada = document.getElementById('check-retirada').checked;
-            const subtotal = document.getElementById('subtotal-preco').innerText;
-            const freteVal = document.getElementById('frete-preco').innerText;
             const totalGeral = document.getElementById('total-final').innerText;
             const cep = document.getElementById('input-cep').value;
             const numeroCasa = document.getElementById('input-numero').value;
 
-            // Gera PDF
+            let resumoItens = "";
+            carrinho.forEach(item => {
+                resumoItens += `${item.quantidade}x ${item.nome} | `;
+            });
+
+            let enderecoFinal = isRetirada ? "RETIRADA NA LOJA" : `CEP ${cep}, Nº ${numeroCasa}`;
+
+            // 2. ENVIAR PARA O GOOGLE SHEETS
+            const formData = new FormData();
+            formData.append('ID Pedido', pedidoID);
+            formData.append('Cliente', nome);
+            formData.append('Telefone', telInput.value);
+            formData.append('Valor Total', totalGeral);
+            formData.append('Tipo Entrega', isRetirada ? 'Retirada' : 'Entrega');
+            formData.append('Endereço', enderecoFinal);
+            formData.append('Itens', resumoItens);
+
+            fetch(SCRIPT_URL, { method: 'POST', body: formData })
+            .then(response => {
+                console.log('Sucesso no banco de dados!');
+                gerarPDFecZAP(pedidoID, nome, telInput.value, pagamento, isRetirada, totalGeral, cep, numeroCasa, btn, textoOriginal);
+            })
+            .catch(error => {
+                console.error('Erro ao salvar!', error);
+                // Mesmo com erro na planilha, segue o fluxo para o cliente não travar
+                gerarPDFecZAP(pedidoID, nome, telInput.value, pagamento, isRetirada, totalGeral, cep, numeroCasa, btn, textoOriginal);
+            });
+        }
+
+        function gerarPDFecZAP(pedidoID, nome, telefone, pagamento, isRetirada, totalGeral, cep, numeroCasa, btn, textoOriginal) {
+            btn.innerText = "Gerando PDF...";
+
+            // GERAÇÃO DO PDF
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const fileName = `${pedidoID}_${nome.split(' ')[0]}.pdf`;
+            const fileName = `${pedidoID}.pdf`;
 
-            // Configuração do PDF
             doc.setFontSize(22);
             doc.setTextColor(0, 31, 63);
             doc.text("VORTEX WEAR", 105, 20, null, null, "center");
             
             doc.setFontSize(14);
             doc.setTextColor(50);
-            doc.text(`PEDIDO DE VENDA - ${pedidoID}`, 105, 30, null, null, "center");
+            doc.text(`PEDIDO - ${pedidoID}`, 105, 30, null, null, "center");
 
             doc.setLineWidth(0.5);
             doc.line(20, 35, 190, 35);
@@ -657,16 +685,15 @@
             doc.setFontSize(12);
             doc.setTextColor(0);
             doc.text(`Cliente: ${nome.toUpperCase()}`, 20, 45);
-            doc.text(`Contato: ${telInput.value}`, 20, 52);
-            doc.text(`ID do Pedido: ${pedidoID}`, 20, 59);
-            doc.text(`Pagamento: ${pagamento}`, 20, 66);
+            doc.text(`Contato: ${telefone}`, 20, 52);
+            doc.text(`Pagamento: ${pagamento}`, 20, 59);
             
             if(isRetirada) {
                 doc.setTextColor(0, 100, 0); 
-                doc.text("Método: RETIRADA NO LOCAL", 20, 73);
+                doc.text("Entrega: RETIRADA NO LOCAL", 20, 66);
             } else {
-                doc.text(`Método: TRANSPORTADORA`, 20, 73);
-                doc.text(`Endereço: CEP ${cep}, Número ${numeroCasa}`, 20, 80);
+                doc.text(`Entrega: TRANSPORTADORA`, 20, 66);
+                doc.text(`Endereço: CEP ${cep}, Nº ${numeroCasa}`, 20, 73);
             }
 
             const dadosTabela = carrinho.map(item => [
@@ -677,8 +704,8 @@
             ]);
 
             doc.autoTable({
-                startY: 90,
-                head: [['Produto', 'Qtd', 'Unitário', 'Subtotal']],
+                startY: 85,
+                head: [['Produto', 'Qtd', 'Unit', 'Total']],
                 body: dadosTabela,
                 theme: 'striped',
                 headStyles: { fillColor: [0, 31, 63] },
@@ -686,36 +713,25 @@
             });
 
             let finalY = doc.lastAutoTable.finalY + 10;
-            
-            doc.setFontSize(12);
-            doc.setTextColor(0);
+            const freteVal = document.getElementById('frete-preco').innerText;
+            const subtotal = document.getElementById('subtotal-preco').innerText;
+
             doc.text(`Subtotal: ${subtotal}`, 140, finalY);
             doc.text(`Frete: ${freteVal}`, 140, finalY + 7);
-            
-            doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
             doc.text(`TOTAL: ${totalGeral}`, 140, finalY + 16);
 
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(100);
-            doc.text("Documento gerado eletronicamente.", 105, 280, null, null, "center");
-
-            // 1. Baixa o PDF
+            // BAIXA O PDF
             doc.save(fileName);
 
-            // 2. Prepara mensagem do WhatsApp com o ID do Pedido
-            const textoZap = `Olá! Fiz o pedido *${pedidoID}* no site.\nEstou enviando o arquivo PDF com os detalhes em anexo.`;
+            // ABRE O WHATSAPP
+            const textoZap = `Olá! Realizei o pedido *${pedidoID}* no site.\nCliente: ${nome}\nValor: ${totalGeral}\n\n*Estou enviando o PDF com os detalhes em anexo.*`;
             const numeroDestino = "5511975524934";
             const linkZap = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(textoZap)}`;
 
-            // 3. Abre o WhatsApp e Avisa
             setTimeout(() => {
                 window.open(linkZap, '_blank');
-                
-                // Mensagem de Instrução para o usuário
-                alert(`PEDIDO ${pedidoID} GERADO!\n\n1. O PDF foi baixado no seu celular/PC.\n2. O WhatsApp foi aberto.\n3. IMPORTANTE: Anexe o PDF baixado na conversa para confirmar.`);
-                
+                alert("PEDIDO REGISTRADO!\n\n1. Dados salvos no sistema.\n2. PDF baixado no seu dispositivo.\n3. O WhatsApp foi aberto para envio.");
                 location.reload(); 
             }, 1500);
         }
