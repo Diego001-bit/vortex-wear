@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vortex Wear - Sistema Logístico B2B</title>
+    <title>Vortex Wear - Portal do Revendedor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
     <style>
         /* --- ESTILO (CSS) --- */
@@ -123,7 +126,7 @@
         .qtd-input-carrinho::-webkit-outer-spin-button,
         .qtd-input-carrinho::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-        /* Área de Frete (CEP) */
+        /* Área de Frete (CEP e Numero) */
         .frete-container { padding: 15px 20px; background-color: #eef2f5; border-top: 1px solid #ddd; }
         
         .retirada-box {
@@ -135,7 +138,11 @@
         .retirada-box label { font-size: 0.95rem; font-weight: bold; cursor: pointer; color: var(--primary-color); }
 
         .frete-input-group { display: flex; gap: 5px; margin-top: 5px; }
-        .frete-input-group input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .frete-input-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        /* Ajuste para caber CEP e Numero na mesma linha */
+        #input-cep { flex: 2; } /* CEP ocupa mais espaço */
+        #input-numero { flex: 1; } /* Numero ocupa menos */
+        
         .btn-calc-frete { padding: 8px 15px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
         .btn-calc-frete:hover { background: var(--secondary-color); }
         .btn-calc-frete:disabled { background: #ccc; cursor: not-allowed; }
@@ -200,14 +207,15 @@
                 <label for="check-retirada">Vou retirar na empresa (Frete Grátis)</label>
             </div>
 
-            <label style="font-weight:bold; font-size:0.9rem">Entrega (CEP de Destino):</label>
+            <label style="font-weight:bold; font-size:0.9rem">Entrega (CEP e Número):</label>
             <div class="frete-input-group">
-                <input type="text" id="input-cep" placeholder="00000-000" maxlength="9">
+                <input type="text" id="input-cep" placeholder="CEP (00000-000)" maxlength="9">
+                <input type="text" id="input-numero" placeholder="Nº" maxlength="6">
                 <button class="btn-calc-frete" onclick="calcularFreteAPI()">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
-            <div id="frete-status" class="frete-status">Digite o CEP ou selecione Retirada.</div>
+            <div id="frete-status" class="frete-status">Digite CEP e Número.</div>
         </div>
 
         <div class="carrinho-footer">
@@ -253,7 +261,9 @@
                         <option>Transferência</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-pagar" id="btn-finalizar-texto">Gerar Pedido</button>
+                <button type="submit" class="btn-pagar" id="btn-finalizar-texto">
+                    <i class="fas fa-check-circle"></i> Gerar Pedido e Enviar
+                </button>
                 <button type="button" onclick="fecharPagamento()" class="btn-cancelar">Voltar</button>
             </form>
         </div>
@@ -317,19 +327,23 @@
             setTimeout(() => {
                 const checkbox = document.getElementById('check-retirada');
                 const cepInput = document.getElementById('input-cep');
+                const numInput = document.getElementById('input-numero');
                 const btnCalc = document.querySelector('.btn-calc-frete');
                 const statusDiv = document.getElementById('frete-status');
 
                 if (checkbox.checked) {
                     cepInput.disabled = true;
+                    numInput.disabled = true;
                     btnCalc.disabled = true;
                     cepInput.value = ""; 
+                    numInput.value = "";
                     statusDiv.innerText = "Coleta na Fábrica (Agendar)";
                     statusDiv.style.color = "var(--primary-color)";
                 } else {
                     cepInput.disabled = false;
+                    numInput.disabled = false;
                     btnCalc.disabled = false;
-                    statusDiv.innerText = "Digite o CEP para calcular.";
+                    statusDiv.innerText = "Digite CEP e Número.";
                     statusDiv.style.color = "#666";
                     custoFreteUnitario = 0; 
                 }
@@ -414,7 +428,6 @@
             const qtdInput = document.getElementById(`qtd-${id}`);
             const quantidade = parseInt(qtdInput.value);
             
-            // Aceita adicionar 1, pois a trava será na soma total
             if (quantidade < 1) {
                 alert("A quantidade deve ser pelo menos 1.");
                 return;
@@ -435,7 +448,6 @@
             setTimeout(() => { btn.innerHTML = originalText; }, 1000);
         }
 
-        // Função dos botões + e -
         function alterarQuantidadeBotao(index, mudanca) {
             const item = carrinho[index];
             item.quantidade += mudanca;
@@ -447,7 +459,6 @@
             }
         }
 
-        // Função do Input no carrinho
         function alterarQuantidadeInput(index, novoValor) {
             let qtd = parseInt(novoValor);
 
@@ -480,11 +491,9 @@
                                 <h4>${item.nome}</h4>
                                 <div class="qtd-selector-carrinho">
                                     <button class="btn-mini" onclick="alterarQuantidadeBotao(${index}, -1)">-</button>
-                                    
                                     <input type="number" class="qtd-input-carrinho" 
                                            value="${item.quantidade}" 
                                            onchange="alterarQuantidadeInput(${index}, this.value)">
-                                    
                                     <button class="btn-mini" onclick="alterarQuantidadeBotao(${index}, 1)">+</button>
                                 </div>
                                 <small>Unit: R$ ${item.preco.toFixed(2)}</small>
@@ -496,7 +505,6 @@
                 });
             }
 
-            // --- CÁLCULO LOGÍSTICO (CAIXAS) ---
             const totalCaixas = Math.ceil(totalUnidades / UNIDADES_POR_CAIXA);
             let multiplicadorFrete = Math.ceil(totalCaixas / 10);
             if (totalUnidades === 0) multiplicadorFrete = 0;
@@ -538,7 +546,6 @@
                 return;
             }
 
-            // --- TRAVA DE MÍNIMO GLOBAL ---
             const totalUnidades = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
             if (totalUnidades < QTD_MINIMA) {
                 alert(`ATENÇÃO:\nO pedido mínimo para atacado é de ${QTD_MINIMA} peças (1 Caixa).\n\nVocê selecionou apenas ${totalUnidades} peças no total.\nAdicione mais itens para fechar a caixa.`);
@@ -546,17 +553,20 @@
             }
 
             const isRetirada = document.getElementById('check-retirada').checked;
+            const numInput = document.getElementById('input-numero').value;
             
-            if (!isRetirada && custoFreteUnitario === 0) {
-                const cep = document.getElementById('input-cep').value;
-                if(cep.length >= 8) {
-                    calcularFreteAPI().then(() => {
-                        abrirModalCheckout(isRetirada);
-                    });
-                } else {
-                    alert("Por favor, digite o CEP ou selecione 'Retirar na empresa'.");
+            if (!isRetirada) {
+                if(custoFreteUnitario === 0) {
+                    const cep = document.getElementById('input-cep').value;
+                    if(cep.length >= 8) {
+                        calcularFreteAPI().then(() => {
+                            abrirModalCheckout(isRetirada);
+                        });
+                    } else {
+                        alert("Por favor, digite o CEP ou selecione 'Retirar na empresa'.");
+                    }
+                    return;
                 }
-                return;
             }
 
             abrirModalCheckout(isRetirada);
@@ -570,10 +580,10 @@
             
             if(isRetirada) {
                 aviso.style.display = 'block';
-                btnTexto.innerText = "Finalizar e Agendar Coleta";
+                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Finalizar';
             } else {
                 aviso.style.display = 'none';
-                btnTexto.innerText = "Gerar Pedido de Entrega";
+                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Finalizar';
             }
 
             modal.classList.add('active');
@@ -583,64 +593,120 @@
             document.getElementById('modal-pagamento').classList.remove('active');
         }
 
-        // --- FUNÇÃO FINALIZAR (WHATSAPP) ---
+        // --- GERADOR DE ID, PDF E WHATSAPP ---
         function finalizarPedido(event) {
             event.preventDefault();
             
-            // 1. Validação Telefone
             const telInput = document.getElementById('input-telefone');
             const telNumeros = telInput.value.replace(/\D/g, '');
 
             if (telNumeros.length < 11) {
-                alert("Erro: O telefone precisa ter o DDD + 9 dígitos (Total 11 números).\nEx: (11) 99999-9999");
+                alert("Erro: O telefone precisa ter o DDD + 9 dígitos (Total 11 números).");
                 telInput.focus();
                 return; 
             }
 
-            // 2. Coleta de Dados
+            // 1. GERAR ID DO PEDIDO
+            // Pega os 4 últimos dígitos do telefone + 4 números aleatórios
+            const ultimos4Telefone = telNumeros.slice(-4);
+            const aleatorio4 = Math.floor(1000 + Math.random() * 9000);
+            const pedidoID = `PED-${ultimos4Telefone}-${aleatorio4}`;
+
+            const btn = document.querySelector('.btn-pagar');
+            const textoOriginal = btn.innerHTML;
+            btn.innerText = "Processando...";
+            
+            // Dados
             const nome = document.getElementById('input-nome').value;
             const pagamento = document.getElementById('select-pagamento').value;
             const isRetirada = document.getElementById('check-retirada').checked;
+            const subtotal = document.getElementById('subtotal-preco').innerText;
+            const freteVal = document.getElementById('frete-preco').innerText;
             const totalGeral = document.getElementById('total-final').innerText;
-            const freteValor = document.getElementById('frete-preco').innerText;
+            const cep = document.getElementById('input-cep').value;
+            const numeroCasa = document.getElementById('input-numero').value;
 
-            // 3. Monta Lista de Itens
-            let listaItens = "";
-            carrinho.forEach(item => {
-                listaItens += `- ${item.quantidade}x ${item.nome} (R$ ${item.preco.toFixed(2)})\n`;
-            });
+            // Gera PDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const fileName = `${pedidoID}_${nome.split(' ')[0]}.pdf`;
 
-            // 4. Monta a Mensagem do WhatsApp
-            let mensagem = `*NOVO PEDIDO - VORTEX WEAR*\n\n`;
-            mensagem += `*Cliente:* ${nome}\n`;
-            mensagem += `*Contato:* ${telInput.value}\n`;
-            mensagem += `*Pagamento:* ${pagamento}\n\n`;
-            mensagem += `*Itens do Pedido:*\n${listaItens}\n`;
+            // Configuração do PDF
+            doc.setFontSize(22);
+            doc.setTextColor(0, 31, 63);
+            doc.text("VORTEX WEAR", 105, 20, null, null, "center");
+            
+            doc.setFontSize(14);
+            doc.setTextColor(50);
+            doc.text(`PEDIDO DE VENDA - ${pedidoID}`, 105, 30, null, null, "center");
+
+            doc.setLineWidth(0.5);
+            doc.line(20, 35, 190, 35);
+
+            doc.setFontSize(12);
+            doc.setTextColor(0);
+            doc.text(`Cliente: ${nome.toUpperCase()}`, 20, 45);
+            doc.text(`Contato: ${telInput.value}`, 20, 52);
+            doc.text(`ID do Pedido: ${pedidoID}`, 20, 59);
+            doc.text(`Pagamento: ${pagamento}`, 20, 66);
             
             if(isRetirada) {
-                mensagem += `*Frete:* RETIRADA NA LOJA (Grátis)\n`;
+                doc.setTextColor(0, 100, 0); 
+                doc.text("Método: RETIRADA NO LOCAL", 20, 73);
             } else {
-                const cep = document.getElementById('input-cep').value;
-                mensagem += `*Frete:* ENTREGA (${freteValor})\n`;
-                mensagem += `*CEP Destino:* ${cep}\n`;
+                doc.text(`Método: TRANSPORTADORA`, 20, 73);
+                doc.text(`Endereço: CEP ${cep}, Número ${numeroCasa}`, 20, 80);
             }
 
-            mensagem += `\n*TOTAL FINAL:* ${totalGeral}`;
+            const dadosTabela = carrinho.map(item => [
+                item.nome,
+                item.quantidade,
+                "R$ " + item.preco.toFixed(2),
+                "R$ " + (item.preco * item.quantidade).toFixed(2)
+            ]);
 
-            // 5. Envia para o WhatsApp
-            const numeroDestino = "5511975524934"; // Seu número
-            const url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(mensagem)}`;
+            doc.autoTable({
+                startY: 90,
+                head: [['Produto', 'Qtd', 'Unitário', 'Subtotal']],
+                body: dadosTabela,
+                theme: 'striped',
+                headStyles: { fillColor: [0, 31, 63] },
+                styles: { fontSize: 10 }
+            });
 
-            const btn = document.querySelector('.btn-pagar');
-            btn.innerText = "Enviando...";
+            let finalY = doc.lastAutoTable.finalY + 10;
             
-            // Abre o WhatsApp em nova aba
-            window.open(url, '_blank');
+            doc.setFontSize(12);
+            doc.setTextColor(0);
+            doc.text(`Subtotal: ${subtotal}`, 140, finalY);
+            doc.text(`Frete: ${freteVal}`, 140, finalY + 7);
+            
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(`TOTAL: ${totalGeral}`, 140, finalY + 16);
 
-            // Feedback visual e reload
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(100);
+            doc.text("Documento gerado eletronicamente.", 105, 280, null, null, "center");
+
+            // 1. Baixa o PDF
+            doc.save(fileName);
+
+            // 2. Prepara mensagem do WhatsApp com o ID do Pedido
+            const textoZap = `Olá! Fiz o pedido *${pedidoID}* no site.\nEstou enviando o arquivo PDF com os detalhes em anexo.`;
+            const numeroDestino = "5511975524934";
+            const linkZap = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(textoZap)}`;
+
+            // 3. Abre o WhatsApp e Avisa
             setTimeout(() => {
+                window.open(linkZap, '_blank');
+                
+                // Mensagem de Instrução para o usuário
+                alert(`PEDIDO ${pedidoID} GERADO!\n\n1. O PDF foi baixado no seu celular/PC.\n2. O WhatsApp foi aberto.\n3. IMPORTANTE: Anexe o PDF baixado na conversa para confirmar.`);
+                
                 location.reload(); 
-            }, 1000);
+            }, 1500);
         }
 
         renderizarProdutos();
