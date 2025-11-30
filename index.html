@@ -104,7 +104,7 @@
         .item-info h4 { font-size: 0.95rem; margin-bottom: 4px; }
         .item-subtotal { color: var(--secondary-color); font-weight: bold; font-size: 0.9rem; }
 
-        /* Controles Quantidade no Carrinho (Editável) */
+        /* Controles Quantidade no Carrinho */
         .qtd-selector-carrinho {
             display: flex; align-items: center; gap: 5px; margin-top: 5px;
             background: #f0f0f0; padding: 2px; border-radius: 4px; width: fit-content;
@@ -116,17 +116,10 @@
         }
         .btn-mini:hover { background: #ddd; }
         
-        /* Input editável dentro do carrinho */
         .qtd-input-carrinho {
-            width: 50px;
-            height: 28px;
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-weight: bold;
-            font-size: 0.9rem;
+            width: 50px; height: 28px; text-align: center; border: 1px solid #ddd;
+            border-radius: 3px; font-weight: bold; font-size: 0.9rem;
         }
-        /* Remove setinhas do input number */
         .qtd-input-carrinho::-webkit-outer-spin-button,
         .qtd-input-carrinho::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
@@ -250,7 +243,7 @@
                 </div>
                 <div class="form-group">
                     <label>Contato (Tel/WhatsApp)</label>
-                    <input type="text" placeholder="(11) 99999-9999" required>
+                    <input type="text" id="input-telefone" placeholder="(11) 99999-9999" required>
                 </div>
                 <div class="form-group">
                     <label>Forma de Pagamento</label>
@@ -290,7 +283,7 @@
         let carrinho = [];
         let custoFreteUnitario = 0; 
 
-        // Renderiza Vitrine (Inicia com 1, força usuário a aumentar para 15)
+        // Renderiza Vitrine
         function renderizarProdutos() {
             const vitrine = document.getElementById('vitrine');
             vitrine.innerHTML = "";
@@ -394,7 +387,7 @@
                 }
 
                 custoFreteUnitario = kmRota * PRECO_POR_KM;
-                atualizarTotais(); // Atualiza visualmente na hora
+                atualizarTotais(); 
 
             } catch (error) {
                 console.log("Usando fallback apresentação");
@@ -442,13 +435,10 @@
             setTimeout(() => { btn.innerHTML = originalText; }, 1000);
         }
 
-        // Função chamada pelos botões + e -
         function alterarQuantidadeBotao(index, mudanca) {
             const item = carrinho[index];
             
-            // Se tentar reduzir abaixo do mínimo pelos botões, pergunta se quer remover
             if (mudanca < 0 && item.quantidade <= QTD_MINIMA) {
-                // Se já estiver no mínimo, remove
                  removerDoCarrinho(index);
                  return;
             }
@@ -462,7 +452,6 @@
             atualizarTotais();
         }
 
-        // Nova função para quando o usuário digita no input do carrinho
         function alterarQuantidadeInput(index, novoValor) {
             let qtd = parseInt(novoValor);
 
@@ -495,7 +484,6 @@
                     const totalItem = item.preco * item.quantidade;
                     subtotal += totalItem;
                     
-                    // Renderiza com INPUT editável
                     container.innerHTML += `
                         <div class="item-carrinho">
                             <div class="item-info">
@@ -520,10 +508,7 @@
 
             // --- CÁLCULO LOGÍSTICO (CAIXAS) ---
             const totalCaixas = Math.ceil(totalUnidades / UNIDADES_POR_CAIXA);
-            
-            // Regra: 1 frete a cada 10 caixas
             let multiplicadorFrete = Math.ceil(totalCaixas / 10);
-            
             if (totalUnidades === 0) multiplicadorFrete = 0;
 
             const isRetirada = document.getElementById('check-retirada').checked;
@@ -542,9 +527,7 @@
             }
 
             document.getElementById('subtotal-preco').innerText = "R$ " + subtotal.toFixed(2).replace('.', ',');
-            
             if(isNaN(freteFinal)) freteFinal = 0;
-            
             document.getElementById('frete-preco').innerText = "R$ " + freteFinal.toFixed(2).replace('.', ',');
             const totalGeral = subtotal + freteFinal;
             document.getElementById('total-final').innerText = "R$ " + totalGeral.toFixed(2).replace('.', ',');
@@ -605,6 +588,18 @@
 
         function finalizarPedido(event) {
             event.preventDefault();
+            
+            // --- VALIDAÇÃO DO TELEFONE ---
+            const telInput = document.getElementById('input-telefone');
+            // Limpa tudo que não for número (espaço, traço, parenteses)
+            const telNumeros = telInput.value.replace(/\D/g, '');
+
+            if (telNumeros.length < 11) {
+                alert("Erro: O telefone precisa ter o DDD + 9 dígitos (Total 11 números).\nEx: (11) 99999-9999");
+                telInput.focus();
+                return; // Impede o envio
+            }
+
             const btn = document.querySelector('.btn-pagar');
             btn.innerText = "Processando...";
             
