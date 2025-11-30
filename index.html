@@ -281,7 +281,7 @@
 
     <script>
         // --- 1. CONFIGURAÇÃO (GOOGLE SHEETS E DADOS) ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzypoWEKqbeEj6wLTpbOeN0V4a07Y6tLjPm4jagABMDMirzTNkFadqSX3gTpW6VGH0j/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9C6nlq_RrNEzXwME5TdA6p3AQ59cmFYj8I7hAZO7TKsdDFK0C454ShS1bgc6LzWSpEA/exec";
         const ORIGEM = { lat: -23.6646, lon: -46.7645 }; // Embu das Artes/SP
         const PRECO_POR_KM = 3.30;
         const UNIDADES_POR_CAIXA = 15;
@@ -398,11 +398,13 @@
                             statusDiv.innerText = `Destino: ${cidadeDestino}`;
                             statusDiv.style.color = "green";
                         } else {
+                            // Fallback Coordenada Vazia
                             kmRota = 25.00; 
                             statusDiv.innerText = `Destino: ${cidadeDestino} (Estimado)`;
                             statusDiv.style.color = "#2ECC40";
                         }
                     } else {
+                        // Fallback Sem Coordenada
                         kmRota = 25.00; 
                         statusDiv.innerText = `Destino: ${cidadeDestino} (Estimado)`;
                         statusDiv.style.color = "#2ECC40";
