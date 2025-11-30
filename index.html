@@ -257,7 +257,7 @@
                     </select>
                 </div>
                 <button type="submit" class="btn-pagar" id="btn-finalizar-texto">
-                    <i class="fas fa-file-pdf"></i> Gerar Pedido PDF
+                    <i class="fas fa-paper-plane"></i> Baixar PDF e Enviar
                 </button>
                 <button type="button" onclick="fecharPagamento()" class="btn-cancelar">Voltar</button>
             </form>
@@ -568,10 +568,10 @@
             
             if(isRetirada) {
                 aviso.style.display = 'block';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Gerar Pedido PDF (Coleta)';
+                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar (Coleta)';
             } else {
                 aviso.style.display = 'none';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Gerar Pedido PDF (Entrega)';
+                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar (Entrega)';
             }
 
             modal.classList.add('active');
@@ -581,7 +581,7 @@
             document.getElementById('modal-pagamento').classList.remove('active');
         }
 
-        // --- GERADOR DE PDF ---
+        // --- GERADOR DE PDF E ENVIO WHATSAPP ---
         function finalizarPedido(event) {
             event.preventDefault();
             
@@ -596,9 +596,9 @@
 
             const btn = document.querySelector('.btn-pagar');
             const textoOriginal = btn.innerHTML;
-            btn.innerText = "Gerando PDF...";
+            btn.innerText = "Processando...";
             
-            // Dados para o PDF
+            // Dados
             const nome = document.getElementById('input-nome').value;
             const pagamento = document.getElementById('select-pagamento').value;
             const isRetirada = document.getElementById('check-retirada').checked;
@@ -607,24 +607,22 @@
             const totalGeral = document.getElementById('total-final').innerText;
             const cep = document.getElementById('input-cep').value;
 
-            // Inicia o jsPDF
+            // Gera PDF
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            const fileName = `Pedido_Vortex_${nome.replace(/\s+/g, '_')}.pdf`;
 
-            // Cabeçalho
             doc.setFontSize(22);
-            doc.setTextColor(0, 31, 63); // Azul Marinho da sua marca
+            doc.setTextColor(0, 31, 63);
             doc.text("VORTEX WEAR", 105, 20, null, null, "center");
             
             doc.setFontSize(14);
             doc.setTextColor(50);
             doc.text("PEDIDO DE VENDA (ATACADO)", 105, 30, null, null, "center");
 
-            // Linha divisória
             doc.setLineWidth(0.5);
             doc.line(20, 35, 190, 35);
 
-            // Dados do Cliente
             doc.setFontSize(12);
             doc.setTextColor(0);
             doc.text(`Cliente: ${nome.toUpperCase()}`, 20, 45);
@@ -632,14 +630,13 @@
             doc.text(`Forma de Pagamento: ${pagamento}`, 20, 59);
             
             if(isRetirada) {
-                doc.setTextColor(0, 100, 0); // Verde
+                doc.setTextColor(0, 100, 0); 
                 doc.text("Método de Entrega: RETIRADA NO LOCAL", 20, 66);
             } else {
                 doc.text(`Método de Entrega: TRANSPORTADORA`, 20, 66);
                 doc.text(`CEP de Destino: ${cep}`, 20, 73);
             }
 
-            // Tabela de Produtos
             const dadosTabela = carrinho.map(item => [
                 item.nome,
                 item.quantidade,
@@ -652,11 +649,10 @@
                 head: [['Produto', 'Qtd', 'Unitário', 'Subtotal']],
                 body: dadosTabela,
                 theme: 'striped',
-                headStyles: { fillColor: [0, 31, 63] }, // Azul Marinho no cabeçalho da tabela
+                headStyles: { fillColor: [0, 31, 63] },
                 styles: { fontSize: 10 }
             });
 
-            // Totais
             let finalY = doc.lastAutoTable.finalY + 10;
             
             doc.setFontSize(12);
@@ -668,18 +664,26 @@
             doc.setFont(undefined, 'bold');
             doc.text(`TOTAL: ${totalGeral}`, 140, finalY + 16);
 
-            // Rodapé
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
             doc.setTextColor(100);
             doc.text("Obrigado pela preferência!", 105, 280, null, null, "center");
 
-            // Salva o arquivo
-            doc.save(`Pedido_Vortex_${nome}.pdf`);
+            // 1. Baixa o PDF
+            doc.save(fileName);
 
+            // 2. Abre o WhatsApp com a mensagem pronta
+            const textoZap = `Olá! Acabei de gerar o pedido *${fileName}* no site.\nEstou enviando o arquivo PDF em anexo aqui na conversa.`;
+            const numeroDestino = "5511975524934";
+            const linkZap = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(textoZap)}`;
+
+            // Pequeno delay para garantir que o download comece antes de mudar de aba
             setTimeout(() => {
-                alert("PDF Gerado com Sucesso! Verifique seus downloads.");
-                btn.innerHTML = textoOriginal;
+                window.open(linkZap, '_blank');
+                
+                // 3. Alerta o usuário
+                alert("PEDIDO GERADO!\n\n1. O PDF foi baixado no seu dispositivo.\n2. O WhatsApp foi aberto.\n3. POR FAVOR, ANEXE O ARQUIVO PDF NA CONVERSA.");
+                
                 location.reload(); 
             }, 1000);
         }
