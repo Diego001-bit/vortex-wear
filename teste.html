@@ -239,7 +239,7 @@
             <form id="form-pagamento" onsubmit="finalizarPedido(event)">
                 <div class="form-group">
                     <label>Empresa / Responsável</label>
-                    <input type="text" placeholder="Nome completo" required>
+                    <input type="text" id="input-nome" placeholder="Nome completo" required>
                 </div>
                 <div class="form-group">
                     <label>Contato (Tel/WhatsApp)</label>
@@ -247,7 +247,7 @@
                 </div>
                 <div class="form-group">
                     <label>Forma de Pagamento</label>
-                    <select>
+                    <select id="select-pagamento">
                         <option>Boleto (30 dias)</option>
                         <option>Cartão Corporativo</option>
                         <option>Transferência</option>
@@ -283,7 +283,7 @@
         let carrinho = [];
         let custoFreteUnitario = 0; 
 
-        // Renderiza Vitrine (Agora permite adicionar 1)
+        // Renderiza Vitrine
         function renderizarProdutos() {
             const vitrine = document.getElementById('vitrine');
             vitrine.innerHTML = "";
@@ -583,10 +583,11 @@
             document.getElementById('modal-pagamento').classList.remove('active');
         }
 
+        // --- FUNÇÃO FINALIZAR (WHATSAPP) ---
         function finalizarPedido(event) {
             event.preventDefault();
             
-            // --- VALIDAÇÃO DO TELEFONE ---
+            // 1. Validação Telefone
             const telInput = document.getElementById('input-telefone');
             const telNumeros = telInput.value.replace(/\D/g, '');
 
@@ -596,20 +597,50 @@
                 return; 
             }
 
-            const btn = document.querySelector('.btn-pagar');
-            btn.innerText = "Processando...";
-            
+            // 2. Coleta de Dados
+            const nome = document.getElementById('input-nome').value;
+            const pagamento = document.getElementById('select-pagamento').value;
             const isRetirada = document.getElementById('check-retirada').checked;
-            let mensagemFinal = "Pedido de Entrega gerado com sucesso! \nAguarde contato da logística.";
+            const totalGeral = document.getElementById('total-final').innerText;
+            const freteValor = document.getElementById('frete-preco').innerText;
 
+            // 3. Monta Lista de Itens
+            let listaItens = "";
+            carrinho.forEach(item => {
+                listaItens += `- ${item.quantidade}x ${item.nome} (R$ ${item.preco.toFixed(2)})\n`;
+            });
+
+            // 4. Monta a Mensagem do WhatsApp
+            let mensagem = `*NOVO PEDIDO - VORTEX WEAR*\n\n`;
+            mensagem += `*Cliente:* ${nome}\n`;
+            mensagem += `*Contato:* ${telInput.value}\n`;
+            mensagem += `*Pagamento:* ${pagamento}\n\n`;
+            mensagem += `*Itens do Pedido:*\n${listaItens}\n`;
+            
             if(isRetirada) {
-                mensagemFinal = "Pedido Confirmado! \nNossa equipe entrará em contato pelo número informado para agendar sua retirada.";
+                mensagem += `*Frete:* RETIRADA NA LOJA (Grátis)\n`;
+            } else {
+                const cep = document.getElementById('input-cep').value;
+                mensagem += `*Frete:* ENTREGA (${freteValor})\n`;
+                mensagem += `*CEP Destino:* ${cep}\n`;
             }
 
+            mensagem += `\n*TOTAL FINAL:* ${totalGeral}`;
+
+            // 5. Envia para o WhatsApp
+            const numeroDestino = "5511975524934"; // Seu número
+            const url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(mensagem)}`;
+
+            const btn = document.querySelector('.btn-pagar');
+            btn.innerText = "Enviando...";
+            
+            // Abre o WhatsApp em nova aba
+            window.open(url, '_blank');
+
+            // Feedback visual e reload
             setTimeout(() => {
-                alert(mensagemFinal);
                 location.reload(); 
-            }, 2000);
+            }, 1000);
         }
 
         renderizarProdutos();
