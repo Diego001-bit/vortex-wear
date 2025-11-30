@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vortex Wear - Portal do Revendedor</title>
+    <title>Vortex Wear - Sistema Logístico B2B</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -91,8 +91,9 @@
 
         /* Sidebar Carrinho */
         .carrinho-sidebar {
-            position: fixed; top: 0; right: -400px;
-            width: 400px; 
+            position: fixed; top: 0; right: -500px; /* Esconde mais para a direita */
+            width: 450px; /* AUMENTADO PARA NÃO CORTAR O BOTÃO */
+            max-width: 100vw; /* Garante que não estoure a tela do celular */
             height: 100%; background: white;
             box-shadow: -5px 0 15px rgba(0,0,0,0.1);
             transition: right 0.4s ease; z-index: 200;
@@ -126,7 +127,7 @@
         .qtd-input-carrinho::-webkit-outer-spin-button,
         .qtd-input-carrinho::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-        /* Área de Frete (CEP e Numero) */
+        /* Área de Frete */
         .frete-container { padding: 15px 20px; background-color: #eef2f5; border-top: 1px solid #ddd; }
         
         .retirada-box {
@@ -139,13 +140,24 @@
 
         .frete-input-group { display: flex; gap: 5px; margin-top: 5px; }
         .frete-input-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        /* Ajuste para caber CEP e Numero na mesma linha */
-        #input-cep { flex: 2; } /* CEP ocupa mais espaço */
-        #input-numero { flex: 1; } /* Numero ocupa menos */
         
-        .btn-calc-frete { padding: 8px 15px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
+        /* AJUSTE PARA OS CAMPOS CABEREM */
+        #input-cep { flex: 2; min-width: 0; } /* CEP ocupa mais espaço */
+        #input-numero { flex: 1; min-width: 0; } /* Numero ocupa menos */
+        
+        /* AJUSTE PARA O BOTÃO NÃO SER CORTADO */
+        .btn-calc-frete { 
+            padding: 8px 15px; 
+            background: var(--primary-color); 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            flex-shrink: 0; /* IMPEDE O BOTÃO DE SER ESMAGADO */
+        }
         .btn-calc-frete:hover { background: var(--secondary-color); }
         .btn-calc-frete:disabled { background: #ccc; cursor: not-allowed; }
+        
         .frete-status { font-size: 0.85rem; color: #666; margin-top: 5px; text-align: right; font-weight: bold; }
 
         /* Footer Carrinho */
@@ -580,10 +592,10 @@
             
             if(isRetirada) {
                 aviso.style.display = 'block';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Finalizar';
+                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar';
             } else {
                 aviso.style.display = 'none';
-                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Finalizar';
+                btnTexto.innerHTML = '<i class="fas fa-file-pdf"></i> Baixar PDF e Enviar';
             }
 
             modal.classList.add('active');
@@ -607,7 +619,6 @@
             }
 
             // 1. GERAR ID DO PEDIDO
-            // Pega os 4 últimos dígitos do telefone + 4 números aleatórios
             const ultimos4Telefone = telNumeros.slice(-4);
             const aleatorio4 = Math.floor(1000 + Math.random() * 9000);
             const pedidoID = `PED-${ultimos4Telefone}-${aleatorio4}`;
