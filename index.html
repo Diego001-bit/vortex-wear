@@ -62,11 +62,20 @@
         }
         .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
 
+        /* --- MUDANÇA AQUI: ÁREA DA IMAGEM --- */
         .img-box {
-            height: 160px; background-color: #eef2f5; 
+            height: 200px; /* Um pouco mais alto para foto */
+            background-color: white; 
             display: flex; align-items: center; justify-content: center; 
-            color: var(--primary-color); font-size: 3rem;
             border-bottom: 1px solid #eee;
+            padding: 10px; /* Espaço para a foto não encostar na borda */
+        }
+        
+        .img-box img {
+            
+            max-width: 150%;
+            max-height: 100%;
+            object-fit: contain; /* Garante que a foto inteira apareça */
         }
 
         .card-details { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
@@ -148,7 +157,7 @@
         .aviso-agendamento {
             background-color: #fff3cd; color: #856404; padding: 10px; 
             border: 1px solid #ffeeba; border-radius: 5px; margin-bottom: 15px; font-size: 0.9rem;
-            display: none; /* Só aparece se for retirada */
+            display: none; 
         }
 
     </style>
@@ -168,7 +177,7 @@
     <main class="container">
         <section class="hero">
             <h2>Logística Integrada</h2>
-            <p>Frete inteligente ou Retirada na fábrica.</p>
+            <p>Unidades referente a 1 caixa com 15 protudos.</p>
         </section>
 
         <section id="vitrine" class="grid-produtos"></section>
@@ -243,6 +252,7 @@
                 <button type="submit" class="btn-pagar" id="btn-finalizar-texto">Gerar Pedido</button>
                 <button type="button" onclick="fecharPagamento()" class="btn-cancelar">Voltar</button>
             </form>
+            <img src="imagens/corta-vento-preto.png" alt="corta-vento-preto">
         </div>
     </div>
 
@@ -251,23 +261,24 @@
         const ORIGEM = { lat: -23.6646, lon: -46.7645 }; // Embu das Artes/SP
         const PRECO_POR_KM = 3.30;
 
+        // --- ATENÇÃO: COLOQUE AQUI O NOME EXATO DAS SUAS IMAGENS ---
         const produtos = [
-            { id: 1, nome: "Capacete de Segurança", ref: "EPI-001", preco: 99.99, icone: "fa-hard-hat" },
-            { id: 2, nome: "Luvas de Proteção", ref: "EPI-002", preco: 99.99, icone: "fa-hands" },
-            { id: 3, nome: "Óculos de Proteção", ref: "EPI-003", preco: 99.99, icone: "fa-eye" },
-            { id: 4, nome: "Botas de Segurança", ref: "EPI-004", preco: 99.99, icone: "fa-shoe-prints" },
-            { id: 5, nome: "Protetor Auricular", ref: "EPI-005", preco: 99.99, icone: "fa-deaf" },
-            { id: 6, nome: "Colete Refletivo", ref: "EPI-006", preco: 99.99, icone: "fa-vest" },
-            { id: 7, nome: "Cinto de Segurança", ref: "EPI-007", preco: 99.99, icone: "fa-user-shield" },
-            { id: 8, nome: "Máscara Respiratória", ref: "EPI-008", preco: 99.99, icone: "fa-mask" },
-            { id: 9, nome: "Extintor de Incêndio", ref: "EXT-009", preco: 99.99, icone: "fa-fire-extinguisher" },
-            { id: 10, nome: "Kit Primeiros Socorros", ref: "MED-010", preco: 99.99, icone: "fa-medkit" }
+            { id: 1, nome: "Corta Vento Preto", ref: "EPI-001", preco: 99.99, imagem: "imagens/corta-vento-preto.png" },
+            { id: 2, nome: "Luvas de Proteção", ref: "EPI-002", preco: 15.50, imagem: "luvas.jpg" },
+            { id: 3, nome: "Óculos de Proteção", ref: "EPI-003", preco: 25.00, imagem: "oculos.jpg" },
+            { id: 4, nome: "Botas de Segurança", ref: "EPI-004", preco: 120.00, imagem: "botas.jpg" },
+            { id: 5, nome: "Protetor Auricular", ref: "EPI-005", preco: 5.00, imagem: "protetor.jpg" },
+            { id: 6, nome: "Colete Refletivo", ref: "EPI-006", preco: 35.00, imagem: "colete.jpg" },
+            { id: 7, nome: "Cinto de Segurança", ref: "EPI-007", preco: 85.00, imagem: "cinto.jpg" },
+            { id: 8, nome: "Máscara Respiratória", ref: "EPI-008", preco: 12.00, imagem: "mascara.jpg" },
+            { id: 9, nome: "Extintor de Incêndio", ref: "EXT-009", preco: 150.00, imagem: "extintor.jpg" },
+            { id: 10, nome: "Kit Primeiros Socorros", ref: "MED-010", preco: 210.00, imagem: "kit.jpg" }
         ];
 
         let carrinho = [];
         let custoFreteUnitario = 0; 
 
-        // Renderiza Vitrine
+        // Renderiza Vitrine COM IMAGENS REAIS
         function renderizarProdutos() {
             const vitrine = document.getElementById('vitrine');
             vitrine.innerHTML = "";
@@ -275,7 +286,9 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div class="img-box"><i class="fas ${produto.icone}"></i></div>
+                    <div class="img-box">
+                        <img src="${produto.imagem}" alt="${produto.nome}" onerror="this.style.display='none'; this.parentNode.innerHTML='SEM FOTO'">
+                    </div>
                     <div class="card-details">
                         <div>
                             <h3>${produto.nome}</h3>
@@ -296,7 +309,6 @@
 
         // --- 2. SISTEMA DE RETIRADA vs ENTREGA ---
         function toggleRetirada() {
-            // Pequeno delay para garantir que o checkbox mudou de estado
             setTimeout(() => {
                 const checkbox = document.getElementById('check-retirada');
                 const cepInput = document.getElementById('input-cep');
@@ -304,26 +316,23 @@
                 const statusDiv = document.getElementById('frete-status');
 
                 if (checkbox.checked) {
-                    // Modo Retirada
                     cepInput.disabled = true;
                     btnCalc.disabled = true;
                     cepInput.value = ""; 
                     statusDiv.innerText = "Coleta na Fábrica (Agendar)";
                     statusDiv.style.color = "var(--primary-color)";
                 } else {
-                    // Modo Entrega
                     cepInput.disabled = false;
                     btnCalc.disabled = false;
                     statusDiv.innerText = "Digite o CEP para calcular.";
                     statusDiv.style.color = "#666";
-                    custoFreteUnitario = 0; // Reseta frete anterior
+                    custoFreteUnitario = 0; 
                 }
                 atualizarTotais();
             }, 50);
         }
 
-
-        // --- 3. SISTEMA DE FRETE (API) ---
+        // --- 3. SISTEMA DE FRETE (API + BLINDAGEM) ---
         async function calcularFreteAPI() {
             const cepInput = document.getElementById('input-cep').value.replace(/\D/g, '');
             const statusDiv = document.getElementById('frete-status');
@@ -361,13 +370,13 @@
                         } else {
                             // Fallback Coordenada Vazia
                             kmRota = 25.00; 
-                            statusDiv.innerText = `Destino: ${cidadeDestino}`;
+                            statusDiv.innerText = `Destino: ${cidadeDestino} (Estimado)`;
                             statusDiv.style.color = "#2ECC40";
                         }
                     } else {
                         // Fallback Sem Coordenada
                         kmRota = 25.00; 
-                        statusDiv.innerText = `Destino: ${cidadeDestino}`;
+                        statusDiv.innerText = `Destino: ${cidadeDestino} (Estimado)`;
                         statusDiv.style.color = "#2ECC40";
                     }
                 } else {
@@ -378,7 +387,6 @@
                 atualizarTotais();
 
             } catch (error) {
-                // Fallback Emergência
                 console.log("Usando fallback apresentação");
                 custoFreteUnitario = 30.00 * PRECO_POR_KM; 
                 statusDiv.innerText = "Rota Calculada (Base Local)";
@@ -462,24 +470,20 @@
                 });
             }
 
-            // --- LÓGICA MESTRA: RETIRADA VS ENTREGA DINÂMICA ---
+            // Regra do Frete (Retirada vs Volume)
             const isRetirada = document.getElementById('check-retirada').checked;
             let freteFinal = 0;
 
             if (isRetirada) {
-                // Se for retirada, Frete é ZERO independente da quantidade
                 freteFinal = 0;
             } else {
-                // Se for entrega, aplica a regra de 1 frete a cada 10 itens
                 let multiplicadorViagens = Math.ceil(totalItens / 10);
                 if (totalItens === 0) multiplicadorViagens = 0;
-                
                 freteFinal = custoFreteUnitario * multiplicadorViagens;
             }
 
             document.getElementById('subtotal-preco').innerText = "R$ " + subtotal.toFixed(2).replace('.', ',');
             
-            // Exibição segura do valor
             if(isNaN(freteFinal)) freteFinal = 0;
             
             document.getElementById('frete-preco').innerText = "R$ " + freteFinal.toFixed(2).replace('.', ',');
@@ -504,7 +508,6 @@
 
             const isRetirada = document.getElementById('check-retirada').checked;
             
-            // Só exige o cálculo do frete se NÃO for retirada
             if (!isRetirada && custoFreteUnitario === 0) {
                 const cep = document.getElementById('input-cep').value;
                 if(cep.length >= 8) {
